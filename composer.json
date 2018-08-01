@@ -1,6 +1,6 @@
 {
     "name": "ihuangzhu/alioss",
-    "description": "This package is work for for aliyun oss service.",
+    "description": "This package is working for for aliyun oss service.",
     "require": {
         "aliyuncs/oss-sdk-php": "~2.0"
     },
