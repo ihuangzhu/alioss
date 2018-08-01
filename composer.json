@@ -1,0 +1,20 @@
+{
+    "name": "ihuangzhu/alioss",
+    "description": "This package is work for for aliyun oss service.",
+    "require": {
+        "aliyuncs/oss-sdk-php": "~2.0"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "ihuangzhu",
+            "email": "ihuangzhu@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "Ihuangzhu\\Alioss\\": "src/"
+        }
+    }
+}
