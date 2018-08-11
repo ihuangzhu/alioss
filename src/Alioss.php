@@ -3,6 +3,7 @@
 namespace Ihuangzhu\Alioss;
 
 
+use Illuminate\Filesystem\FilesystemAdapter;
 use OSS\Core\OssException;
 use OSS\OssClient;
 
@@ -75,62 +76,195 @@ class Alioss
     }
 
     /**
-     * 删除文件
+     * 删除指定文件
      *
      * @param string $path
      * @return bool
      */
     public function delete($path)
     {
-        return $this->ossClient->deleteObject($this->bucket, $path);
+        try {
+            return $this->ossClient->deleteObject($this->bucket, $path);
+        } catch (OssException $e) {
+            logger('Delete object fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
-     * 文件是否存在
+     * 创建文件夹
+     *
+     * @param string $dirname directory name
+     * @return bool
+     */
+    public function createDir($dirname)
+    {
+        try {
+            $this->ossClient->createObjectDir($this->bucket, $dirname);
+            return true;
+        } catch (OssException $e) {
+            logger('Create dir fail. Cause: ' . $e->getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * 设置文件权限
      *
      * @param string $path
-     * @return array|bool|null
+     * @param string $visibility
+     * @return bool
+     */
+    public function setVisibility($path, $visibility)
+    {
+        try {
+            $acl = $visibility === FilesystemAdapter::VISIBILITY_PRIVATE ? OssClient::OSS_ACL_TYPE_PRIVATE : OssClient::OSS_ACL_TYPE_PUBLIC_READ;
+            $this->ossClient->putObjectAcl($this->bucket, $path, $acl);
+            return true;
+        } catch (OssException $e) {
+            logger('Set object visibility fail. Cause: ' . $e->getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * 检测文件是否存在
+     *
+     * @param string $path
+     * @return bool
      */
     public function has($path)
     {
-        return $this->ossClient->doesObjectExist($this->bucket, $path);
+        try {
+            return $this->ossClient->doesObjectExist($this->bucket, $path);
+        } catch (OssException $e) {
+            logger('Get object exist fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
-     * 获取文件详情数据
+     * 读取文本段落
+     *
+     * @param string $path
+     * @return string|false
+     */
+    public function read($path)
+    {
+        try {
+            return $this->ossClient->getObject($this->bucket, $path);
+        } catch (OssException $e) {
+            logger('Get object read fail. Cause: ' . $e->getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * 读取文件
+     *
+     * @param string $path
+     * @return array|false
+     */
+    public function readStream($path)
+    {
+        try {
+            $contents = $this->ossClient->getObject($this->bucket, $path);
+            $stream = fopen('php://temp', 'w+b');
+            fwrite($stream, $contents);
+            rewind($stream);
+            return $stream;
+        } catch (OssException $e) {
+            logger('Get object read steam fail. Cause: ' . $e->getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * 获取文件详细数据
      *
      * @param string $path
      * @return array|false
      */
     public function getMetadata($path)
     {
-        return $this->ossClient->getObjectMeta($this->bucket, $path);
+        try {
+            return $this->ossClient->getObjectMeta($this->bucket, $path);
+        } catch (OssException $e) {
+            logger('Get object metadata fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
      * 获取文件大小
      *
      * @param string $path
-     * @return array|false
+     * @return integer|false
      */
     public function getSize($path)
     {
-        $metadata = $this->getMetadata($path);
-        if ($metadata === false) return false;
-        return $metadata['content-length'];
+        try {
+            $metadata = $this->getMetadata($path);
+            if ($metadata === false) return false;
+            return $metadata['content-length'];
+        } catch (OssException $e) {
+            logger('Get object size fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
      * 获取文件mimetype
      *
      * @param string $path
-     *
-     * @return array|false
+     * @return string|false
      */
     public function getMimetype($path)
     {
-        $metadata = $this->getMetadata($path);
-        if ($metadata === false) return false;
-        return $metadata['content-type'];
+        try {
+            $metadata = $this->getMetadata($path);
+            if ($metadata === false) return false;
+            return $metadata['content-type'];
+        } catch (OssException $e) {
+            logger('Get object mimetype fail. Cause: ' . $e->getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * 获取文件的上次修改时间
+     *
+     * @param string $path
+     * @return integer|false
+     */
+    public function getTimestamp($path)
+    {
+        try {
+            $metadata = $this->getMetadata($path);
+            if ($metadata === false) return false;
+            return strtotime($metadata['last-modified']);
+        } catch (OssException $e) {
+            logger('Get object timestamp fail. Cause: ' . $e->getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * 获取文件的权限
+     *
+     * @param string $path
+     * @return string|bool
+     */
+    public function getVisibility($path)
+    {
+        try {
+            $visibility = FilesystemAdapter::VISIBILITY_PRIVATE;
+            $acl = $this->ossClient->getObjectAcl($this->bucket, $path);
+            if ($acl == OssClient::OSS_ACL_TYPE_PUBLIC_READ) $visibility = FilesystemAdapter::VISIBILITY_PUBLIC;
+            return $visibility;
+        } catch (OssException $e) {
+            logger('Get object visibility fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 }

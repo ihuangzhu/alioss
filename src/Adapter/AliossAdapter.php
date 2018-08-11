@@ -17,11 +17,11 @@ class AliossAdapter extends AbstractAdapter
      * @var array
      */
     private static $resultMap = [
-        'Body'           => 'raw_contents',
+        'Body' => 'raw_contents',
         'Content-Length' => 'size',
-        'ContentType'    => 'mimetype',
-        'Size'           => 'size',
-        'StorageClass'   => 'storage_class',
+        'ContentType' => 'mimetype',
+        'Size' => 'size',
+        'StorageClass' => 'storage_class',
     ];
 
     /**
@@ -140,7 +140,12 @@ class AliossAdapter extends AbstractAdapter
      */
     public function delete($path)
     {
-        return $this->ossClient->deleteObject($this->bucket, $path);
+        try {
+            return $this->ossClient->deleteObject($this->bucket, $path);
+        } catch (OssException $e) {
+            logger('Delete object fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
@@ -232,8 +237,13 @@ class AliossAdapter extends AbstractAdapter
      */
     public function createDir($dirname, Config $config)
     {
-        $this->ossClient->createObjectDir($this->bucket, $dirname);
-        return ['path' => $dirname, 'type' => 'dir'];
+        try {
+            $this->ossClient->createObjectDir($this->bucket, $dirname);
+            return ['path' => $dirname, 'type' => 'dir'];
+        } catch (OssException $e) {
+            logger('Create dir fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
@@ -241,13 +251,14 @@ class AliossAdapter extends AbstractAdapter
      *
      * @param string $path
      * @param string $visibility
-     * @return array|false file meta data
+     * @return bool file meta data
      */
     public function setVisibility($path, $visibility)
     {
         try {
             $acl = $visibility === FilesystemAdapter::VISIBILITY_PRIVATE ? OssClient::OSS_ACL_TYPE_PRIVATE : OssClient::OSS_ACL_TYPE_PUBLIC_READ;
-            return $this->ossClient->putObjectAcl($this->bucket, $path, $acl);
+            $this->ossClient->putObjectAcl($this->bucket, $path, $acl);
+            return true;
         } catch (OssException $e) {
             logger('Set object visibility fail. Cause: ' . $e->getMessage());
         }
@@ -258,11 +269,16 @@ class AliossAdapter extends AbstractAdapter
      * 检测文件是否存在
      *
      * @param string $path
-     * @return array|bool|null
+     * @return bool
      */
     public function has($path)
     {
-        return $this->ossClient->doesObjectExist($this->bucket, $path);
+        try {
+            return $this->ossClient->doesObjectExist($this->bucket, $path);
+        } catch (OssException $e) {
+            logger('Get object exist fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
@@ -273,8 +289,13 @@ class AliossAdapter extends AbstractAdapter
      */
     public function read($path)
     {
-        $contents = $this->ossClient->getObject($this->bucket, $path);
-        return ['contents' => $contents];
+        try {
+            $contents = $this->ossClient->getObject($this->bucket, $path);
+            return ['contents' => $contents];
+        } catch (OssException $e) {
+            logger('Get object read fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
@@ -285,11 +306,16 @@ class AliossAdapter extends AbstractAdapter
      */
     public function readStream($path)
     {
-        $contents = $this->ossClient->getObject($this->bucket, $path);
-        $stream = fopen('php://temp', 'w+b');
-        fwrite($stream, $contents);
-        rewind($stream);
-        return ['stream' => $stream];
+        try {
+            $contents = $this->ossClient->getObject($this->bucket, $path);
+            $stream = fopen('php://temp', 'w+b');
+            fwrite($stream, $contents);
+            rewind($stream);
+            return ['stream' => $stream];
+        } catch (OssException $e) {
+            logger('Get object read steam fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
@@ -317,7 +343,7 @@ class AliossAdapter extends AbstractAdapter
     /**
      * Normalize a result from AWS.
      *
-     * @param array  $object
+     * @param array $object
      * @param string $path
      *
      * @return array file metadata
@@ -346,7 +372,12 @@ class AliossAdapter extends AbstractAdapter
      */
     public function getMetadata($path)
     {
-        return $this->ossClient->getObjectMeta($this->bucket, $path);
+        try {
+            return $this->ossClient->getObjectMeta($this->bucket, $path);
+        } catch (OssException $e) {
+            logger('Get object metadata fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
@@ -357,9 +388,14 @@ class AliossAdapter extends AbstractAdapter
      */
     public function getSize($path)
     {
-        $metadata = $this->getMetadata($path);
-        if ($metadata === false) return false;
-        return ['size' => $metadata['content-length']];
+        try {
+            $metadata = $this->getMetadata($path);
+            if ($metadata === false) return false;
+            return ['size' => $metadata['content-length']];
+        } catch (OssException $e) {
+            logger('Get object size fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
@@ -370,9 +406,14 @@ class AliossAdapter extends AbstractAdapter
      */
     public function getMimetype($path)
     {
-        $metadata = $this->getMetadata($path);
-        if ($metadata === false) return false;
-        return ['mimetype' => $metadata['content-type']];
+        try {
+            $metadata = $this->getMetadata($path);
+            if ($metadata === false) return false;
+            return ['mimetype' => $metadata['content-type']];
+        } catch (OssException $e) {
+            logger('Get object mimetype fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
@@ -383,9 +424,14 @@ class AliossAdapter extends AbstractAdapter
      */
     public function getTimestamp($path)
     {
-        $metadata = $this->getMetadata($path);
-        if ($metadata === false) return false;
-        return ['timestamp' => strtotime($metadata['last-modified'])];
+        try {
+            $metadata = $this->getMetadata($path);
+            if ($metadata === false) return false;
+            return ['timestamp' => strtotime($metadata['last-modified'])];
+        } catch (OssException $e) {
+            logger('Get object timestamp fail. Cause: ' . $e->getMessage());
+        }
+        return false;
     }
 
     /**
@@ -397,9 +443,9 @@ class AliossAdapter extends AbstractAdapter
     public function getVisibility($path)
     {
         try {
-            $visibility = AdapterInterface::VISIBILITY_PRIVATE;
+            $visibility = FilesystemAdapter::VISIBILITY_PRIVATE;
             $acl = $this->ossClient->getObjectAcl($this->bucket, $path);
-            if ($acl == OssClient::OSS_ACL_TYPE_PUBLIC_READ) $visibility = AdapterInterface::VISIBILITY_PUBLIC;
+            if ($acl == OssClient::OSS_ACL_TYPE_PUBLIC_READ) $visibility = FilesystemAdapter::VISIBILITY_PUBLIC;
             return ['visibility' => $visibility];
         } catch (OssException $e) {
             logger('Get object visibility fail. Cause: ' . $e->getMessage());

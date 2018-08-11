@@ -12,13 +12,6 @@ use OSS\OssClient;
 class AliossServiceProvider extends ServiceProvider
 {
     /**
-     * Indicates if loading of the provider is deferred.
-     *
-     * @var bool
-     */
-    protected $defer = true; // 延迟加载服务
-
-    /**
      * Bootstrap services.
      *
      * @return void
@@ -63,13 +56,4 @@ class AliossServiceProvider extends ServiceProvider
         }
     }
 
-    /**
-     * Get the services provided by the provider.
-     *
-     * @return array
-     */
-    public function provides()
-    {
-        return ['alioss'];
-    }
 }
